@@ -19,6 +19,7 @@
   },
   "homepage": "https://github.com/joshuasells/bigquery-pool-ingestor#readme",
   "dependencies": {
+    "@google-cloud/bigquery": "^6.0.3",
     "dotenv": "^16.0.3",
     "express": "^4.18.2",
     "web3": "^1.8.1"
