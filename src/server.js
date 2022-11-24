@@ -7,9 +7,7 @@ app.use(express.json()); // for parsing application/json
 app.use(express.urlencoded({ extended: true })); // for parsing application/x-www-form-urlencoded
 
 app.post('/', async (req, res) => {
-    const exchangeName = req.body.exchangeName;
-    const numberOfBlocks = req.body.numberOfBlocks;
-    let result = await main(exchangeName, numberOfBlocks);
+    let result = await main(req.body.blockchain, req.body.exchangeName, req.body.numberOfBlocks);
     res.status(result.status).send(result.message);
 });
 
