@@ -7,7 +7,16 @@ app.use(express.json()); // for parsing application/json
 app.use(express.urlencoded({ extended: true })); // for parsing application/x-www-form-urlencoded
 
 app.post('/', async (req, res) => {
-    let result = await main(req.body.blockchain, req.body.exchangeName, req.body.numberOfBlocks);
+    let start = new Date();
+    console.log(`Start Time is: ${start}`);
+
+    let result = await main(req.body);
+
+    let end = new Date();
+    console.log(`End Time is: ${end}`);
+    console.log(`Time taken: ${(end - start) / 1000} seconds`);
+    console.log(result.message);
+
     res.status(result.status).send(result.message);
 });
 

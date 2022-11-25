@@ -1,4 +1,5 @@
 import * as Constants from './constants.js';
+const bigQuery = new BigQuery();
 
 import Web3 from 'web3';
 import Web3HttpProvider from 'web3-providers-http';
@@ -6,29 +7,75 @@ import axios from 'axios';
 import { BigQuery } from '@google-cloud/bigquery';
 import IUniswapV2Factory from '@uniswap/v2-core/build/IUniswapV2Factory.json';
 
-export const main = async (blockchain, exchangeName, numberOfBlocks) => {
+export const main = async (requestBody) => {
+    const { blockchain, exchangeName, numberOfBlocks, rpcBlockBatchSize } = requestBody;
     const { web3, expirationTimestamp } = await initializeWeb3(blockchain);
-    const { blockCursor, factoryAddress } = await getExchangeData(blockchain, exchangeName);
+    const latestBlockNumber = await web3.eth.getBlockNumber();
+    const { blockCursor, factoryAddress, eventName, dataset, table } = await getExchangeData(blockchain, exchangeName);
+    const contract = new web3.eth.Contract(IUniswapV2Factory.abi, factoryAddress);
 
-    // Build Factory contract
+    // Non inclusive. This will be the starting block on the next execution.
+    // Example: blockCursor = 1, endingBlock = 1000
+    // The current run will search for past event logs from blocks 1 up to and including 999, but not 1000.
+    // 1000 will be updated to be the blockCursor starting next run.
+    const endingBlock = Math.min(blockCursor + numberOfBlocks, latestBlockNumber);
+    let events = [];
+
+    // Parse through past blocks in batches
+    for (let i = blockCursor; i < endingBlock; i += rpcBlockBatchSize) {
+        events = events.concat(
+            await contract.getPastEvents(eventName, {
+                fromBlock: i,
+                toBlock: Math.min(i + rpcBlockBatchSize, endingBlock) - 1 /* <----The subtraction makes the endingBlock variable non inclusive */,
+            })
+        );
+    }
+
+    if (events.length == 0) {
+        return {
+            status: 200,
+            message: 'No pairs to ingest. Table is fully updated.',
+        };
+    }
+
+    const rows = events.map((event) => {
+        return {
+            exchangeName,
+            pairAddress: event.returnValues.pair,
+            token0Address: event.returnValues.token0,
+            token1Address: event.returnValues.token1,
+            index: event.returnValues[3] - 1,
+            blockNumber: event.blockNumber,
+        };
+    });
+
+    await bigQuery.dataset(dataset).table(table).insert(rows);
+    await updateBlockCursor(endingBlock, blockchain, exchangeName);
 
     return {
         status: 200,
-        message: 'Placeholder Message',
+        message: `Inserted ${rows.length} rows into \`${dataset}.${table}\``,
     };
 };
 
 const getExchangeData = async (blockchain, exchangeName) => {
-    const queryString = `SELECT blockCursor, factoryAddress FROM \`crypto-351521.operations.pool_ingestion_cursor\` WHERE exchangeName = \'${exchangeName}\' AND blockchain = \'${blockchain}\' LIMIT 1`;
+    const queryString = `SELECT blockCursor, factoryAddress, poolCreationEventName, dataset, table FROM \`crypto-351521.operations.pool_ingestion_cursor\` LIMIT 1`;
     const rows = await query(queryString);
     return {
         blockCursor: rows[0].blockCursor,
         factoryAddress: rows[0].factoryAddress,
+        eventName: rows[0].poolCreationEventName,
+        dataset: rows[0].dataset,
+        table: rows[0].table,
     };
 };
 
+const updateBlockCursor = async (endingBlock, blockchain, exchangeName) => {
+    const queryString = `UPDATE \`crypto-351521.operations.pool_ingestion_cursor\` SET blockCursor = ${endingBlock}, updateTimestamp = CURRENT_TIMESTAMP() WHERE exchangeName = \'${exchangeName}\' AND blockchain = \'${blockchain}\'`;
+    await query(queryString);
+};
+
 const query = async (queryString) => {
-    const bigQuery = new BigQuery();
     const options = {
         query: queryString,
         location: 'US',
