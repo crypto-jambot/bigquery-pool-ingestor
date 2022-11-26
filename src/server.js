@@ -1,6 +1,7 @@
 import 'dotenv/config';
 import express from 'express';
 import { main } from './index.js';
+import { PORT } from './constants.js';
 
 const app = express();
 app.use(express.json()); // for parsing application/json
@@ -19,8 +20,6 @@ app.post('/', async (req, res) => {
 
     res.status(result.status).send(result.message);
 });
-
-const PORT = process.env.PORT || 8080;
 
 app.listen(PORT, () => {
     console.log(`bigquery-pool-ingestor: listening on port ${PORT}`);

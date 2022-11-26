@@ -1,23 +1,20 @@
 import * as Constants from './constants.js';
-const bigQuery = new BigQuery();
 
 import Web3 from 'web3';
 import Web3HttpProvider from 'web3-providers-http';
 import axios from 'axios';
 import { BigQuery } from '@google-cloud/bigquery';
 import IUniswapV2Factory from '@uniswap/v2-core/build/IUniswapV2Factory.json';
+import IUniswapV3Factory from '@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json';
+
+const bigQuery = new BigQuery();
 
 export const main = async (requestBody) => {
     const { blockchain, exchangeName, numberOfBlocks, rpcBlockBatchSize } = requestBody;
-    const { web3, expirationTimestamp } = await initializeWeb3(blockchain);
+    const web3 = await initializeWeb3(blockchain);
     const latestBlockNumber = await web3.eth.getBlockNumber();
     const { blockCursor, factoryAddress, eventName, dataset, table } = await getExchangeData(blockchain, exchangeName);
-    const contract = new web3.eth.Contract(IUniswapV2Factory.abi, factoryAddress);
-
-    // Non inclusive. This will be the starting block on the next execution.
-    // Example: blockCursor = 1, endingBlock = 1000
-    // The current run will search for past event logs from blocks 1 up to and including 999, but not 1000.
-    // 1000 will be updated to be the blockCursor starting next run.
+    const contract = createWeb3Contract(web3, exchangeName, factoryAddress);
     const endingBlock = Math.min(blockCursor + numberOfBlocks, latestBlockNumber);
     let events = [];
 
@@ -39,14 +36,7 @@ export const main = async (requestBody) => {
     }
 
     const rows = events.map((event) => {
-        return {
-            exchangeName,
-            pairAddress: event.returnValues.pair,
-            token0Address: event.returnValues.token0,
-            token1Address: event.returnValues.token1,
-            index: event.returnValues[3] - 1,
-            blockNumber: event.blockNumber,
-        };
+        return extractDataFromEvent(exchangeName, event);
     });
 
     await bigQuery.dataset(dataset).table(table).insert(rows);
@@ -59,7 +49,7 @@ export const main = async (requestBody) => {
 };
 
 const getExchangeData = async (blockchain, exchangeName) => {
-    const queryString = `SELECT blockCursor, factoryAddress, poolCreationEventName, dataset, table FROM \`crypto-351521.operations.pool_ingestion_cursor\` LIMIT 1`;
+    const queryString = `SELECT blockCursor, factoryAddress, poolCreationEventName, dataset, table FROM \`crypto-351521.operations.pool_ingestion_cursor\` WHERE exchangeName = \'${exchangeName}\' AND blockchain = \'${blockchain}\' LIMIT 1`;
     const rows = await query(queryString);
     return {
         blockCursor: rows[0].blockCursor,
@@ -68,6 +58,38 @@ const getExchangeData = async (blockchain, exchangeName) => {
         dataset: rows[0].dataset,
         table: rows[0].table,
     };
+};
+
+const createWeb3Contract = (web3, exchangeName, factoryAddress) => {
+    switch (exchangeName) {
+        case 'uniswapV2':
+            return new web3.eth.Contract(IUniswapV2Factory.abi, factoryAddress);
+        case 'uniswapV3':
+            return new web3.eth.Contract(IUniswapV3Factory.abi, factoryAddress);
+    }
+};
+
+const extractDataFromEvent = (exchangeName, event) => {
+    switch (exchangeName) {
+        case 'uniswapV2':
+            return {
+                exchangeName,
+                pairAddress: event.returnValues.pair,
+                token0Address: event.returnValues.token0,
+                token1Address: event.returnValues.token1,
+                index: event.returnValues[3] - 1,
+                blockNumber: event.blockNumber,
+            };
+        case 'uniswapV3':
+            return {
+                poolAddress: event.returnValues.pool,
+                token0Address: event.returnValues.token0,
+                token1Address: event.returnValues.token1,
+                fee: event.returnValues.fee,
+                tickSpacing: event.returnValues.tickSpacing,
+                blockNumber: event.blockNumber,
+            };
+    }
 };
 
 const updateBlockCursor = async (endingBlock, blockchain, exchangeName) => {
@@ -98,7 +120,7 @@ const initializeWeb3 = async (blockchain) => {
         return response.data.token;
     };
 
-    const { token, exp } = await getAccessToken();
+    const { token } = await getAccessToken();
     const options = {
         headers: [
             {
@@ -108,9 +130,5 @@ const initializeWeb3 = async (blockchain) => {
         ],
     };
 
-    const web3 = new Web3(new Web3HttpProvider(Constants.JAM_ETH_NODE_HTTPS, options));
-    return {
-        web3,
-        expirationTimestamp: exp,
-    };
+    return new Web3(new Web3HttpProvider(Constants.JAM_ETH_NODE_HTTPS, options));
 };
