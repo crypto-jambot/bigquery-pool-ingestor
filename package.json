@@ -4,8 +4,9 @@
   "description": "This repository ingests historical pool data on an ad hoc basis.",
   "main": "src/server.js",
   "scripts": {
-    "start": "node --experimental-json-modules .",
-    "dev": "nodemon --experimental-json-modules src/server.js"
+    "start": "node .",
+    "dev": "nodemon src/server.js",
+    "patch": "npm version patch --git-tag-version"
   },
   "type": "module",
   "repository": {
