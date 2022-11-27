@@ -1,6 +1,6 @@
 {
   "name": "bigquery-pool-ingestor",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "description": "This repository ingests historical pool data on an ad hoc basis.",
   "main": "src/server.js",
   "scripts": {
