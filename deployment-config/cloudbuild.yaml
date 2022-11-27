@@ -25,6 +25,8 @@ steps:
         '$_SERVICE_ACCOUNT',
         '--set-env-vars',
         'API_KEY=${_API_KEY}',
+        '--set-env-vars',
+        'PORT=${_PORT}',
       ]
 images:
   - gcr.io/$PROJECT_ID/$_SERVICE_NAME:$COMMIT_SHA
