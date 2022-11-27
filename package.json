@@ -1,0 +1,34 @@
+{
+  "name": "bigquery-pool-ingestor",
+  "version": "1.0.0",
+  "description": "This repository ingests historical pool data on an ad hoc basis.",
+  "main": "src/server.js",
+  "scripts": {
+    "start": "node .",
+    "dev": "nodemon src/server.js",
+    "patch": "npm version patch --git-tag-version"
+  },
+  "type": "module",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/joshuasells/bigquery-pool-ingestor.git"
+  },
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/joshuasells/bigquery-pool-ingestor/issues"
+  },
+  "homepage": "https://github.com/joshuasells/bigquery-pool-ingestor#readme",
+  "dependencies": {
+    "@google-cloud/bigquery": "^6.0.3",
+    "@uniswap/v2-core": "^1.0.1",
+    "@uniswap/v3-core": "^1.0.1",
+    "axios": "^1.2.0",
+    "dotenv": "^16.0.3",
+    "express": "^4.18.2",
+    "web3": "^1.8.1"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.20"
+  }
+}
