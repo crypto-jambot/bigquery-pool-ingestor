@@ -4,8 +4,8 @@ import Web3 from 'web3';
 import Web3HttpProvider from 'web3-providers-http';
 import axios from 'axios';
 import { BigQuery } from '@google-cloud/bigquery';
-import IUniswapV2Factory from '@uniswap/v2-core/build/IUniswapV2Factory.json';
-import IUniswapV3Factory from '@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json';
+import IUniswapV2Factory from '@uniswap/v2-core/build/IUniswapV2Factory.json' assert { type: 'json' };
+import IUniswapV3Factory from '@uniswap/v3-core/artifacts/contracts/UniswapV3Factory.sol/UniswapV3Factory.json' assert { type: 'json' };
 
 const bigQuery = new BigQuery();
 
