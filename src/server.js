@@ -1,8 +1,8 @@
 import 'dotenv/config';
 import express from 'express';
 import { main } from './index.js';
-import { PORT } from './constants.js';
 
+const PORT = process.env.PORT ?? 8080;
 const app = express();
 app.use(express.json()); // for parsing application/json
 app.use(express.urlencoded({ extended: true })); // for parsing application/x-www-form-urlencoded
