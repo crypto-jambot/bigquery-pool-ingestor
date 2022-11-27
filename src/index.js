@@ -13,7 +13,7 @@ export const main = async (requestBody) => {
     const { blockchain, exchangeName, numberOfBlocks, rpcBlockBatchSize } = requestBody;
     const web3 = await initializeWeb3(blockchain);
     const latestBlockNumber = await web3.eth.getBlockNumber();
-    const { blockCursor, factoryAddress, eventName, dataset, table } = await getExchangeData(blockchain, exchangeName);
+    const { blockCursor, factoryAddress, eventName, dataset, table, primaryKey } = await getExchangeData(blockchain, exchangeName);
     const contract = createWeb3Contract(web3, exchangeName, factoryAddress);
     const endingBlock = Math.min(blockCursor + numberOfBlocks, latestBlockNumber);
     let events = [];
@@ -30,8 +30,8 @@ export const main = async (requestBody) => {
 
     if (events.length == 0) {
         return {
-            status: 200,
-            message: 'No pairs to ingest. Table is fully updated.',
+            success: true,
+            message: `No pairs to ingest. ${exchangeName} on the ${blockchain} blockchain is fully updated.`,
         };
     }
 
@@ -39,17 +39,21 @@ export const main = async (requestBody) => {
         return extractDataFromEvent(exchangeName, event);
     });
 
-    await bigQuery.dataset(dataset).table(table).insert(rows);
+    // De-duplicate rows
+    const duplicateRows = await getDuplicateRows(blockCursor, endingBlock, dataset, table, primaryKey);
+    const deduplicatedRows = rows.filter((row) => !duplicateRows.has(row[primaryKey]));
+
+    await bigQuery.dataset(dataset).table(table).insert(deduplicatedRows);
     await updateBlockCursor(endingBlock, blockchain, exchangeName);
 
     return {
-        status: 200,
+        success: true,
         message: `Inserted ${rows.length} rows into \`${dataset}.${table}\``,
     };
 };
 
 const getExchangeData = async (blockchain, exchangeName) => {
-    const queryString = `SELECT blockCursor, factoryAddress, poolCreationEventName, dataset, table FROM \`crypto-351521.operations.pool_ingestion_cursor\` WHERE exchangeName = \'${exchangeName}\' AND blockchain = \'${blockchain}\' LIMIT 1`;
+    const queryString = `SELECT blockCursor, factoryAddress, poolCreationEventName, dataset, table, primaryKey FROM \`crypto-351521.operations.pool_ingestion_cursor\` WHERE exchangeName = \'${exchangeName}\' AND blockchain = \'${blockchain}\' LIMIT 1`;
     const rows = await query(queryString);
     return {
         blockCursor: rows[0].blockCursor,
@@ -57,6 +61,7 @@ const getExchangeData = async (blockchain, exchangeName) => {
         eventName: rows[0].poolCreationEventName,
         dataset: rows[0].dataset,
         table: rows[0].table,
+        primaryKey: rows[0].primaryKey,
     };
 };
 
@@ -95,6 +100,12 @@ const extractDataFromEvent = (exchangeName, event) => {
 const updateBlockCursor = async (endingBlock, blockchain, exchangeName) => {
     const queryString = `UPDATE \`crypto-351521.operations.pool_ingestion_cursor\` SET blockCursor = ${endingBlock}, updateTimestamp = CURRENT_TIMESTAMP() WHERE exchangeName = \'${exchangeName}\' AND blockchain = \'${blockchain}\'`;
     await query(queryString);
+};
+
+const getDuplicateRows = async (blockCursor, endingBlock, dataset, table, primaryKey) => {
+    const queryString = `SELECT ${primaryKey} AS primaryKey FROM \`crypto-351521.${dataset}.${table}\` WHERE blockNumber >= ${blockCursor} AND blockNumber < ${endingBlock}`;
+    const rows = await query(queryString);
+    return new Set(rows.map((row) => row.primaryKey));
 };
 
 const query = async (queryString) => {

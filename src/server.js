@@ -9,16 +9,40 @@ app.use(express.urlencoded({ extended: true })); // for parsing application/x-ww
 
 app.post('/', async (req, res) => {
     let start = new Date();
-    console.log(`Start Time is: ${start}`);
+    console.log(`Start Time is: ${start.toLocaleString({ timezone: 'CST' })}`);
 
-    let result = await main(req.body);
+    let result;
+    if (Array.isArray(req.body)) {
+        result = [];
+        for (const item of req.body) {
+            try {
+                result.push(await main(item));
+            } catch (err) {
+                result.push({
+                    success: false,
+                    message: `Something went wrong when ingesting pools for ${item.exchangeName} on the ${item.blockchain} blockchain.`,
+                    error: err,
+                });
+            }
+        }
+    } else {
+        try {
+            result = await main(req.body);
+        } catch (err) {
+            result = {
+                success: false,
+                message: `Something went wrong when ingesting pools for ${req.body.exchangeName} on the ${req.body.blockchain} blockchain.`,
+                error: err,
+            };
+        }
+    }
 
     let end = new Date();
-    console.log(`End Time is: ${end}`);
+    console.log(`End Time is: ${end.toLocaleString({ timezone: 'CST' })}`);
     console.log(`Time taken: ${(end - start) / 1000} seconds`);
-    console.log(result.message);
+    console.log(result);
 
-    res.status(result.status).send(result.message);
+    res.json(result);
 });
 
 app.listen(PORT, () => {
