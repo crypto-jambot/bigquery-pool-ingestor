@@ -1,0 +1,34 @@
+{
+  "steps": [
+    {
+      "name": "gcr.io/cloud-builders/docker",
+      "id": "Dockerizing application",
+      "args": ["build", "-f", "deployment-config/Dockerfile", "-t", "gcr.io/$PROJECT_ID/bigquery-pool-ingester:$COMMIT_SHA", "."]
+    },
+    {
+      "name": "gcr.io/cloud-builders/docker",
+      "id": "Pushing docker image to container registry",
+      "args": ["push", "gcr.io/$PROJECT_ID/bigquery-pool-ingester:$COMMIT_SHA"]
+    },
+    {
+      "name": "gcr.io/google.com/cloudsdktool/cloud-sdk",
+      "id": "Deploying to US central",
+      "entrypoint": "gcloud",
+      "args": [
+        "run",
+        "deploy",
+        "bigquery-pool-ingester",
+        "--image",
+        "gcr.io/$PROJECT_ID/bigquery-pool-ingester:$COMMIT_SHA",
+        "--region",
+        "us-central1",
+        "--service-account",
+        "${_SERVICE_ACCOUNT}",
+        "--set-env-vars",
+        "API_KEY=${_API_KEY}"
+      ]
+    }
+  ],
+  "images": ["gcr.io/$PROJECT_ID/bigquery-pool-ingester:$COMMIT_SHA"],
+  "options": { "substitution_option": "ALLOW_LOOSE" }
+}
