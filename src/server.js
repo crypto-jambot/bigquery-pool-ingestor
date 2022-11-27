@@ -1,4 +1,3 @@
-import 'dotenv/config';
 import express from 'express';
 import { main } from './index.js';
 
