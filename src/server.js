@@ -21,7 +21,7 @@ app.post('/', async (req, res) => {
                 result.push({
                     success: false,
                     message: `Something went wrong when ingesting pools for ${item.exchangeName} on the ${item.blockchain} blockchain.`,
-                    error: err,
+                    error: err.toString(),
                 });
             }
         }
@@ -32,7 +32,7 @@ app.post('/', async (req, res) => {
             result = {
                 success: false,
                 message: `Something went wrong when ingesting pools for ${req.body.exchangeName} on the ${req.body.blockchain} blockchain.`,
-                error: err,
+                error: err.toString(),
             };
         }
     }
