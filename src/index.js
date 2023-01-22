@@ -69,8 +69,8 @@ const initializeWeb3 = async () => {
     const options = {
         headers: [
             {
-                name: 'access-token',
-                value: token,
+                name: 'Authorization',
+                value: `Bearer ${token}`,
             },
         ],
     };
