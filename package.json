@@ -1,6 +1,6 @@
 {
   "name": "bigquery-pool-ingestor",
-  "version": "1.0.7",
+  "version": "1.1.0-0",
   "description": "This repository ingests historical pool data on an ad hoc basis.",
   "main": "src/server.js",
   "scripts": {
@@ -20,13 +20,13 @@
   },
   "homepage": "https://github.com/joshuasells/bigquery-pool-ingestor#readme",
   "dependencies": {
-    "@google-cloud/bigquery": "^6.0.3",
+    "@crypto-jambot/bigquery-utils": "^1.1.1",
+    "@crypto-jambot/secret-manager-utils": "^1.1.1",
+    "@crypto-jambot/web3-utils": "^1.0.3",
     "@uniswap/v2-core": "^1.0.1",
     "@uniswap/v3-core": "^1.0.1",
-    "axios": "^1.2.0",
     "dotenv": "^16.0.3",
-    "express": "^4.18.2",
-    "web3": "^1.8.1"
+    "express": "^4.18.2"
   },
   "devDependencies": {
     "nodemon": "^2.0.20"
