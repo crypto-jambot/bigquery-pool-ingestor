@@ -1,11 +1,10 @@
 steps:
-  - name: gcr.io/cloud-builders/npm
-    id: Installing dependencies
-    entrypoint: npm
-    args: ['ci']
   - name: gcr.io/cloud-builders/docker
     id: Dockerizing application
-    args: ['build', '-f', 'deployment-config/Dockerfile', '-t', 'gcr.io/$PROJECT_ID/$_SERVICE_NAME:$COMMIT_SHA', '.']
+    entrypoint: bash
+    args: ['-c', 'docker build -f deployment-config/Dockerfile -t gcr.io/$PROJECT_ID/$_SERVICE_NAME:$COMMIT_SHA --build-arg NPM_TOKEN=$$NPM_TOKEN .']
+    secretEnv:
+      - NPM_TOKEN
   - name: gcr.io/cloud-builders/docker
     id: Pushing docker image to container registry
     args: ['push', 'gcr.io/$PROJECT_ID/$_SERVICE_NAME:$COMMIT_SHA']
@@ -23,10 +22,27 @@ steps:
         '$_REGION',
         '--service-account',
         '$_SERVICE_ACCOUNT',
+        '--timeout',
+        '$_TIMEOUT',
         '--set-env-vars',
-        'API_KEY=${_API_KEY}',
+        'API_SECRET_KEY=${_API_SECRET_KEY}',
+        '--set-env-vars',
+        'PROJECT_ID=${PROJECT_ID}',
       ]
 images:
   - gcr.io/$PROJECT_ID/$_SERVICE_NAME:$COMMIT_SHA
+substitutions:
+  _REGION: us-central1
+  _SERVICE_ACCOUNT: pool-ingestor@crypto-351521.iam.gserviceaccount.com
+  _SERVICE_NAME: bigquery-pool-ingestor
+  _SECRET_VERSION: latest
+  _API_SECRET_KEY: api-secret-key
+  _NPM_SECRET_KEY: npm-token-key
+  _REGISTRY_URL: https://npm.pkg.github.com/
+  _TIMEOUT: 15m
+availableSecrets:
+  secretManager:
+    - versionName: projects/$PROJECT_NUMBER/secrets/$_NPM_SECRET_KEY/versions/$_SECRET_VERSION
+      env: 'NPM_TOKEN'
 options:
   substitution_option: ALLOW_LOOSE
