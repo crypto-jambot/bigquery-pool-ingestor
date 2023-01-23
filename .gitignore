@@ -105,3 +105,6 @@ dist
 
 #IDE Files
 .idea/
+
+#Production Ignore
+package-lock.json

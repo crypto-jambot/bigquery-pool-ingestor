@@ -8,9 +8,6 @@ app.use(express.json()); // for parsing application/json
 app.use(express.urlencoded({ extended: true })); // for parsing application/x-www-form-urlencoded
 
 app.post('/', async (req, res) => {
-    let start = new Date();
-    console.log(`Start Time is: ${start.toLocaleString({ timezone: 'CST' })}`);
-
     let result;
     if (Array.isArray(req.body)) {
         result = [];
@@ -36,12 +33,6 @@ app.post('/', async (req, res) => {
             };
         }
     }
-
-    let end = new Date();
-    console.log(`End Time is: ${end.toLocaleString({ timezone: 'CST' })}`);
-    console.log(`Time taken: ${(end - start) / 1000} seconds`);
-    console.log(result);
-
     res.json(result);
 });
 
