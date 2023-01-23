@@ -11,6 +11,9 @@ jobs:
   build:
     if: "!contains(github.event.commits[0].author.name, 'GitHub Actions Bot')"
     runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
 
     strategy:
       matrix:
@@ -23,9 +26,15 @@ jobs:
         uses: actions/setup-node@v3
         with:
           node-version: ${{ matrix.node-version }}
-          cache: 'npm'
+          registry-url: 'https://npm.pkg.github.com'
+          # Defaults to the user or organization that owns the workflow file
+          scope: '@crypto-jambot'
+
       - name: Install dependencies
-        run: npm ci
+        run: npm install --production --engine-strict --ignore-scripts --no-package-lock
+        env:
+          NODE_AUTH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
       # - name: Run tests
       #   run: npm test
       - name: Setup git config
