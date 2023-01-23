@@ -15,7 +15,7 @@ export const main = async (requestBody) => {
     const ethereum = await web3.getEthereum();
     const latestBlockNumber = await ethereum.getBlockNumber();
     const { blockCursor, factoryAddress, eventName, dataset, table, primaryKey } = await getExchangeData(blockchain, exchangeName);
-    const contract = await createWeb3Contract(ethereum, exchangeName, factoryAddress);
+    const contract = createWeb3Contract(ethereum, exchangeName, factoryAddress);
     const endingBlock = Math.min(blockCursor + numberOfBlocks, latestBlockNumber);
     let events = [];
 
@@ -45,7 +45,6 @@ export const main = async (requestBody) => {
     const deduplicatedRows = rows.filter((row) => !duplicateRows.has(row[primaryKey]));
 
     await bqUtil.insert({ dataset, table, data: deduplicatedRows });
-    // await bigQuery.dataset(dataset).table(table).insert(deduplicatedRows);
     await updateBlockCursor(endingBlock, blockchain, exchangeName);
 
     return {
