@@ -6,6 +6,8 @@ import IUniswapV3Factory from '@uniswap/v3-core/artifacts/contracts/UniswapV3Fac
 
 const bqUtil = new BigQueryUtil();
 const secretUtil = new SecretUtil();
+const V2_TABLE = 'uniswap_v2_pools';
+const V3_TABLE = 'uniswap_v3_pools';
 
 export const main = async (requestBody) => {
     const { blockchain, exchangeName, numberOfBlocks, rpcBlockBatchSize } = requestBody;
@@ -14,7 +16,7 @@ export const main = async (requestBody) => {
     const ethereum = await web3.getEthereum();
     const latestBlockNumber = await ethereum.getBlockNumber();
     const { blockCursor, factoryAddress, eventName, dataset, table, primaryKey } = await getExchangeData(blockchain, exchangeName);
-    const contract = createWeb3Contract(ethereum, exchangeName, factoryAddress);
+    const contract = createWeb3Contract(ethereum, table, factoryAddress);
     const endingBlock = Math.min(blockCursor + numberOfBlocks, latestBlockNumber);
     let events = [];
 
@@ -37,7 +39,7 @@ export const main = async (requestBody) => {
     }
 
     const rows = events.map((event) => {
-        return extractDataFromEvent(exchangeName, event);
+        return extractDataFromEvent(exchangeName, event, table);
     });
 
     // De-duplicate rows
@@ -65,22 +67,18 @@ const getExchangeData = async (blockchain, exchangeName) => {
     };
 };
 
-const createWeb3Contract = (ethereum, exchangeName, factoryAddress) => {
-    switch (exchangeName) {
-        case 'uniswapV3':
-        case 'sushiswapV3':
-        case 'pancakeswapV3':
+const createWeb3Contract = (ethereum, table, factoryAddress) => {
+    switch (table) {
+        case V3_TABLE:
             return new ethereum.Contract(IUniswapV3Factory.abi, factoryAddress);
-        default:
+        case V2_TABLE:
             return new ethereum.Contract(IUniswapV2Factory.abi, factoryAddress);
     }
 };
 
-const extractDataFromEvent = (exchangeName, event) => {
-    switch (exchangeName) {
-        case 'uniswapV3':
-        case 'sushiswapV3':
-        case 'pancakeswapV3':
+const extractDataFromEvent = (exchangeName, event, table) => {
+    switch (table) {
+        case V3_TABLE:
             return {
                 exchangeName,
                 poolAddress: event.returnValues.pool,
@@ -90,7 +88,7 @@ const extractDataFromEvent = (exchangeName, event) => {
                 tickSpacing: event.returnValues.tickSpacing,
                 blockNumber: event.blockNumber,
             };
-        default:
+        case V2_TABLE:
             return {
                 exchangeName,
                 pairAddress: event.returnValues.pair,
