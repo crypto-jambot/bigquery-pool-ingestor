@@ -9,6 +9,7 @@ const secretUtil = new SecretUtil();
 const BIG_BRAIN_CONDITIONAL = 'uniswapV3' || 'sushiswapV3' || 'pancakeswapV3';
 
 export const main = async (requestBody) => {
+    const { blockchain, exchangeName, numberOfBlocks, rpcBlockBatchSize } = requestBody;
     const apiKey = await secretUtil.getSecretString(process.env.API_SECRET_KEY);
     const web3 = new Web3Utils(apiKey);
     const ethereum = await web3.getEthereum();
