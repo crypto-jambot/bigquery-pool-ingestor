@@ -6,7 +6,6 @@ import IUniswapV3Factory from '@uniswap/v3-core/artifacts/contracts/UniswapV3Fac
 
 const bqUtil = new BigQueryUtil();
 const secretUtil = new SecretUtil();
-const BIG_BRAIN_CONDITIONAL = 'uniswapV3' || 'sushiswapV3' || 'pancakeswapV3';
 
 export const main = async (requestBody) => {
     const { blockchain, exchangeName, numberOfBlocks, rpcBlockBatchSize } = requestBody;
@@ -68,7 +67,9 @@ const getExchangeData = async (blockchain, exchangeName) => {
 
 const createWeb3Contract = (ethereum, exchangeName, factoryAddress) => {
     switch (exchangeName) {
-        case BIG_BRAIN_CONDITIONAL:
+        case 'uniswapV3':
+        case 'sushiswapV3':
+        case 'pancakeswapV3':
             return new ethereum.Contract(IUniswapV3Factory.abi, factoryAddress);
         default:
             return new ethereum.Contract(IUniswapV2Factory.abi, factoryAddress);
@@ -77,7 +78,9 @@ const createWeb3Contract = (ethereum, exchangeName, factoryAddress) => {
 
 const extractDataFromEvent = (exchangeName, event) => {
     switch (exchangeName) {
-        case BIG_BRAIN_CONDITIONAL:
+        case 'uniswapV3':
+        case 'sushiswapV3':
+        case 'pancakeswapV3':
             return {
                 exchangeName,
                 poolAddress: event.returnValues.pool,
