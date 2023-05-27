@@ -10,7 +10,6 @@ const secretUtil = new SecretUtil();
 export const main = async (requestBody) => {
     const { blockchain, exchangeName, numberOfBlocks, rpcBlockBatchSize } = requestBody;
     const apiKey = await secretUtil.getSecretString(process.env.API_SECRET_KEY);
-
     const web3 = new Web3Utils(apiKey);
     const ethereum = await web3.getEthereum();
     const latestBlockNumber = await ethereum.getBlockNumber();
@@ -29,7 +28,8 @@ export const main = async (requestBody) => {
         );
     }
 
-    if (events.length == 0) {
+    if (events.length === 0) {
+        await updateBlockCursor(endingBlock, blockchain, exchangeName);
         return {
             success: true,
             message: `No pairs to ingest. ${exchangeName} on the ${blockchain} blockchain is fully updated.`,
