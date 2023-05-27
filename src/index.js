@@ -6,9 +6,9 @@ import IUniswapV3Factory from '@uniswap/v3-core/artifacts/contracts/UniswapV3Fac
 
 const bqUtil = new BigQueryUtil();
 const secretUtil = new SecretUtil();
+const BIG_BRAIN_CONDITIONAL = 'uniswapV3' || 'sushiswapV3' || 'pancakeswapV3';
 
 export const main = async (requestBody) => {
-    const { blockchain, exchangeName, numberOfBlocks, rpcBlockBatchSize } = requestBody;
     const apiKey = await secretUtil.getSecretString(process.env.API_SECRET_KEY);
     const web3 = new Web3Utils(apiKey);
     const ethereum = await web3.getEthereum();
@@ -67,7 +67,7 @@ const getExchangeData = async (blockchain, exchangeName) => {
 
 const createWeb3Contract = (ethereum, exchangeName, factoryAddress) => {
     switch (exchangeName) {
-        case 'uniswapV3':
+        case BIG_BRAIN_CONDITIONAL:
             return new ethereum.Contract(IUniswapV3Factory.abi, factoryAddress);
         default:
             return new ethereum.Contract(IUniswapV2Factory.abi, factoryAddress);
@@ -76,8 +76,9 @@ const createWeb3Contract = (ethereum, exchangeName, factoryAddress) => {
 
 const extractDataFromEvent = (exchangeName, event) => {
     switch (exchangeName) {
-        case 'uniswapV3':
+        case BIG_BRAIN_CONDITIONAL:
             return {
+                exchangeName,
                 poolAddress: event.returnValues.pool,
                 token0Address: event.returnValues.token0,
                 token1Address: event.returnValues.token1,
@@ -98,14 +99,7 @@ const extractDataFromEvent = (exchangeName, event) => {
 };
 
 const getDuplicateRows = async (blockCursor, endingBlock, dataset, table, primaryKey, exchangeName) => {
-    let queryString;
-    switch (exchangeName) {
-        case 'uniswapV3':
-            queryString = `SELECT ${primaryKey} AS primaryKey FROM \`crypto-351521.${dataset}.${table}\` WHERE blockNumber >= ${blockCursor} AND blockNumber < ${endingBlock}`;
-            break;
-        default:
-            queryString = `SELECT ${primaryKey} AS primaryKey FROM \`crypto-351521.${dataset}.${table}\` WHERE blockNumber >= ${blockCursor} AND blockNumber < ${endingBlock} AND exchangeName = '${exchangeName}'`;
-    }
+    const queryString = `SELECT ${primaryKey} AS primaryKey FROM \`crypto-351521.${dataset}.${table}\` WHERE blockNumber >= ${blockCursor} AND blockNumber < ${endingBlock} AND exchangeName = '${exchangeName}'`;
     const rows = await bqUtil.query(queryString);
     return new Set(rows.map((row) => row.primaryKey));
 };
